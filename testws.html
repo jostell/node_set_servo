@@ -1,0 +1,116 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<style>
+		.disabled {
+			pointer-events: none;
+			background-color: gray;
+		}
+		</style>
+		<script src="jquery-2.2.4.js"></script>
+		<script type="text/javascript">
+		var ws;
+		var reconnect_interval = 1000; // ms
+		var reconnect_timer;
+		
+		function on_data_received(jsondata)
+		{
+			console.log(jsondata);
+			try {
+				var data = JSON.parse(jsondata);
+				
+				var position = parseInt(data["position"]);
+				console.log("position: " + position);
+											
+				$("#position-slider").val(position);
+				$("#position-value").text(position);
+			}
+			catch (e)
+			{
+				console.log("error parsing");
+				$("#status").text("syntax error in response: " + jsondata);
+			}
+		};
+		
+		// Get initial state via normal AJAX request, then connect websocket
+		function connect() {
+			$.get("http://localhost:3000/position").success(function(data) {
+				console.log("Handshake success");
+				console.log(data);
+				
+				on_data_received(data);
+				
+				$("#status").text("Handshake success");
+				if (reconnect_timer != null)
+					window.clearTimeout(reconnect_timer);
+				
+				ws = new WebSocket("ws://localhost:3000/");
+
+				ws.onopen = function(event) {
+					$("#status").text("Open");
+					$("#position-slider").removeClass('disabled'); // enable sliders
+					
+					if (reconnect_timer != null) 
+						window.clearTimeout(reconnect_timer);
+				};
+				
+				ws.onclose = function(event) {
+					$("#status").text("Closed");
+					$("#position-slider").addClass('disabled'); // disable sliders
+					reconnect_timer = window.setTimeout(connect, reconnect_interval);
+				};
+				
+				ws.onerror = function(event) {
+					$("#status").text("Error");
+				};
+				
+				ws.onmessage = function(event) {
+					on_data_received(event.data);
+				};				
+			})
+			.fail(function() { 
+				console.log("Handshake fail");
+				$("#status").text("Handshake fail");
+				reconnect_timer = window.setTimeout(connect, reconnect_interval);
+			});
+		};
+		
+
+		
+		$(document).ready(function() {	
+		
+			$("#status").text("TBD");
+			
+			connect();
+			
+			$("#position-slider").change(function(){
+				if (ws.readyState == ws.OPEN)
+				{
+					var msg = {
+						set_position: $(this).val()
+					};
+					
+					ws.send(JSON.stringify(msg));
+				}
+			});
+		});
+		</script>
+	</head>
+	
+	
+	<body>
+		<!--<button id="do-request">do request</button>-->
+		<em>STATUS: </em><span id="status"></span>
+		<table>
+			<tr>
+				<th>POSITION</th>
+				<th></th>
+			</tr>
+			<tr>
+				<td><input class="disabled" id="position-slider" type="range" name="position-slider" min="0" max="360"></td>
+				<td><span id="position-value">UNKNOWN</span> degrees</td>
+			</tr>
+
+		</table>
+	</body>
+</html>
