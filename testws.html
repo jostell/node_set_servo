@@ -24,6 +24,7 @@
 											
 				$("#position-slider").val(position);
 				$("#position-value").text(position);
+				$("#next-value").text("");
 			}
 			catch (e)
 			{
@@ -83,7 +84,23 @@
 			
 			connect();
 			
+			$("#position-slider").on("input", function(){
+				var nextval = $(this).val();
+				$("#next-value").text(nextval);
+				/*
+				if (ws.readyState == ws.OPEN)
+				{
+					var msg = {
+						set_position: $(this).val()
+					};
+					ws.send(JSON.stringify(msg));
+				}
+				*/
+			});
+			
+			
 			$("#position-slider").change(function(){
+				$("#next-value").text("");
 				if (ws.readyState == ws.OPEN)
 				{
 					var msg = {
@@ -104,11 +121,14 @@
 		<table>
 			<tr>
 				<th>POSITION</th>
-				<th></th>
+				<th>NOW</th>
+				<th>NEXT</th>
 			</tr>
 			<tr>
-				<td><input class="disabled" id="position-slider" type="range" name="position-slider" min="0" max="360"></td>
-				<td><span id="position-value">UNKNOWN</span> degrees</td>
+				<td><input class="disabled" id="position-slider" type="range" name="position-slider" min="0" max="360" step="5"></td>
+				<td><span id="position-value"></span></td>
+				<td><span id="next-value"></span></td>
+				<td>degrees</td>
 			</tr>
 
 		</table>
